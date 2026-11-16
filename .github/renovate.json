@@ -11,6 +11,7 @@
     {
       "matchDatasources": ["docker"],
       "registryUrls": ["https://dhi.io"]
+    },
     {
       "matchDatasources": ["apk"],
       "registryUrls": [
