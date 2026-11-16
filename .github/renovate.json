@@ -32,8 +32,8 @@
       "registryUrls": [
         "https://deb.debian.org/debian/dists/trixie/main/binary-amd64/Packages.gz",
         "https://deb.debian.org/debian-security/dists/trixie-security/main/binary-amd64/Packages.xz",
-        "https://packages.microsoft.com/debian/13/prod?suite=trixie&components=main&binaryArch=amd64",
-        "https://dhi.io/deb/debian?suite=trixie&components=main&binaryArch=amd64"
+        "https://dhi.io/deb/debian/main/dists/trixie/main/binary-amd64/Packages.gz",
+        "https://packages.microsoft.com/debian/13/prod?suite=trixie&components=main&binaryArch=amd64"
       ]
     }
   ]

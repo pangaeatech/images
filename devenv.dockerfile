@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-venv=3.13.5-1+deb13u0+dhi0 \
         python3-dev=3.13.5-1+deb13u0+dhi0 \
         python3-poetry=2.1.2+dfsg-1+deb13u1 \
-        neovim=0.10.0
+        neovim=0.10.4-8
 
 # Install .NET SDK
 RUN touch /etc/shells
