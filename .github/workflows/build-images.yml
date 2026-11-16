@@ -10,32 +10,51 @@ permissions:
   contents: read
 
 jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      dockerfiles: ${{ steps.find.outputs.dockerfiles }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find Dockerfiles
+        id: find
+        run: |
+          dockerfiles=$(find . -maxdepth 1 -name "*.dockerfile" -printf "%f\n" | sed -e 's/\.dockerfile$//' | sort | jq -R . | jq -sc .)
+          echo "Found Dockerfiles: $dockerfiles"
+          if [ "$dockerfiles" = "[]" ]; then
+            echo "No Dockerfiles found."
+            exit 1
+          fi
+          echo "dockerfiles=$dockerfiles" >> $GITHUB_OUTPUT
+
   build:
+    needs: discover
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        dockerfile: ${{ fromJSON(needs.discover.outputs.dockerfiles) }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: docker/setup-buildx-action@v3
 
-      - name: Test build
+      - name: Build ${{ matrix.dockerfile }}
+        if: github.ref_type != 'tag'
         run: |
-          for f in *.dockerfile; do
-            basename=$(basename "$f" .dockerfile)
-            echo "Building image for $basename"
+          echo "Building image ${{ matrix.dockerfile }}"
 
-            docker buildx build --file "$f" .
-          done
+          docker buildx build --file "${{ matrix.dockerfile }}.dockerfile" .
 
-      - if: github.ref_type == 'tag'
+      - name: Build and Push ${{ matrix.dockerfile }}
+        if: github.ref_type == 'tag'
         run: |
-          for f in *.dockerfile; do
-            basename=$(basename "$f" .dockerfile)
-            echo "Building and pushing image for $basename"
+          echo "Building and pushing image ${{ matrix.dockerfile }}"
 
-            docker buildx build --file "$f" --push --tag "ghcr.io/${{ github.repository }}/${basename}:${TAG}" .
-          done
+          docker buildx build --file "${{ matrix.dockerfile }}" --push --tag "ghcr.io/${{ github.repository }}/${{ matrix.dockerfile }}.dockerfile:${TAG}" .
         env:
           TAG: ${GITHUB_REF#refs/tags/}
