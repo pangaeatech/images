@@ -9,28 +9,24 @@
   },
   "packageRules": [
     {
+      "matchDatasources": ["docker"],
+      "registryUrls": ["https://dhi.io"]
+    {
+      "matchDatasources": ["apk"],
+      "registryUrls": [
+        "https://dhi.io/apk/alpine/v3.24/main",
+        "https://dl-cdn.alpinelinux.org/alpine/v3.24/community"
+      ]
+    },
+    {
       "description": "Default: Debian trixie for every apt pin in a Dockerfile",
       "matchManagers": ["dockerfile"],
       "matchDatasources": ["deb"],
       "registryUrls": [
-        "https://deb.debian.org/debian?suite=trixie&components=main,contrib&binaryArch=amd64",
-        "https://deb.debian.org/debian?suite=trixie-updates&components=main,contrib&binaryArch=amd64",
-        "https://deb.debian.org/debian-security?suite=trixie-security&components=main,contrib&binaryArch=amd64"
-      ]
-    },
-    {
-      "description": "Override: Microsoft packages come from packages.microsoft.com",
-      "matchManagers": ["dockerfile"],
-      "matchDatasources": ["deb"],
-      "matchPackageNames": [
-        "/^dotnet-/",
-        "/^aspnetcore-/",
-        "powershell",
-        "/^msodbcsql/",
-        "/^mssql-tools/"
-      ],
-      "registryUrls": [
-        "https://packages.microsoft.com/debian/13/prod?suite=trixie&components=main&binaryArch=amd64"
+        "https://deb.debian.org/debian/dists/trixie/main/binary-amd64/Packages.gz",
+        "https://deb.debian.org/debian-security/dists/trixie-security/main/binary-amd64/Packages.xz",
+        "https://packages.microsoft.com/debian/13/prod?suite=trixie&components=main&binaryArch=amd64",
+        "https://dhi.io/deb/debian/main/dists/trixie/main/binary-amd64/Packages.gz"
       ]
     }
   ]
