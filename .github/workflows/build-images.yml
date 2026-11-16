@@ -1,0 +1,41 @@
+name: Build Images
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Test build
+        run: |
+          for f in *.dockerfile; do
+            basename=$(basename "$f" .dockerfile)
+            echo "Building image for $basename"
+
+            docker buildx build --file "$f" .
+          done
+
+      - if: github.ref_type == 'tag'
+        run: |
+          for f in *.dockerfile; do
+            basename=$(basename "$f" .dockerfile)
+            echo "Building and pushing image for $basename"
+
+            docker buildx build --file "$f" --push --tag "ghcr.io/${{ github.repository }}/${basename}:${TAG}" .
+          done
+        env:
+          TAG: ${GITHUB_REF#refs/tags/}
