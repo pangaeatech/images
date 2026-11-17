@@ -56,4 +56,4 @@ jobs:
           tag=${GITHUB_REF#refs/tags/v}
           echo "Building and pushing image ${{ matrix.dockerfile }} for tag $tag"
 
-          docker buildx build --file "${{ matrix.dockerfile }}" --push --tag "ghcr.io/${{ github.repository }}/${{ matrix.dockerfile }}.dockerfile:${tag}" .
+          docker buildx build --file "${{ matrix.dockerfile }}.dockerfile" --push --tag "ghcr.io/${{ github.repository }}/${{ matrix.dockerfile }}:${tag}" .
