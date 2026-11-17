@@ -1,4 +1,4 @@
-FROM dhi.io/debian-base:trixie-debian13-dev
+FROM dhi.io/debian-base:trixie-debian13-dev@sha256:f90fd43cdf3dd94840b4dc3a2a39fd2a08578e40e7895535e2e20a1275ba6013
 
 # renovate: datasource=github-tags depName=github/copilot.vim versioning=semver extractVersion=^v(?<version>.*)$
 ENV COPILOT_VIM_VERSION=1.59.0
