@@ -23,9 +23,8 @@ RUN touch /etc/shells
 RUN curl -fsSL -o packages-microsoft-prod.deb https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb \
     && dpkg -i packages-microsoft-prod.deb \
     && rm packages-microsoft-prod.deb
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        dotnet-sdk-10.0=10.0.403-1 \
-        powershell=7.6.9-1.deb
+RUN apt-get update && apt-get install -y --no-install-recommends dotnet-sdk-10.0=10.0.404-1 
+RUN apt-get update && apt-get install -y --no-install-recommends powershell=7.6.9-1.deb
 
 # Delete apt cache to reduce image size
 RUN rm -Rf /var/lib/apt/lists/*

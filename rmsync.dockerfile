@@ -6,7 +6,7 @@ RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.24/community" >> /etc/apk/rep
 # Install dependencies
 RUN apk add --no-cache \
         bash=5.3.9-r1 \
-        jq=~1.8.2 \
+        jq=1.8.2_git20261021-r2 \
         curl=8.23.0-r0 \
         pandoc-cli=3.10-r0 \
         zip=3.0-r13 \
