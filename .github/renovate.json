@@ -21,8 +21,8 @@
     {
       "matchDatasources": ["apk"],
       "registryUrls": [
-        "https://dhi.io/apk/alpine/v3.24/main",
-        "https://dl-cdn.alpinelinux.org/alpine/v3.24/community"
+        "https://dhi.io/apk/alpine/v3.24/main?arch=x86_64",
+        "https://dl-cdn.alpinelinux.org/alpine/v3.24/community?arch=x86_64"
       ]
     },
     {
@@ -30,9 +30,9 @@
       "matchManagers": ["dockerfile"],
       "matchDatasources": ["deb"],
       "registryUrls": [
-        "https://deb.debian.org/debian/dists/trixie/main/binary-amd64/Packages.gz",
-        "https://deb.debian.org/debian-security/dists/trixie-security/main/binary-amd64/Packages.xz",
-        "https://dhi.io/deb/debian/main/dists/trixie/main/binary-amd64/Packages.gz",
+        "https://deb.debian.org/debian/?suite=trixie&components=main&binaryArch=amd64",
+        "https://deb.debian.org/debian-security/?suite=trixie-security&components=main&binaryArch=amd64",
+        "https://dhi.io/deb/debian/main/?suite=trixie&components=main&binaryArch=amd64",
         "https://packages.microsoft.com/debian/13/prod?suite=trixie&components=main&binaryArch=amd64"
       ]
     }
