@@ -4,7 +4,7 @@ FROM dhi.io/debian-base:trixie-debian13-dev@sha256:f90fd43cdf3dd94840b4dc3a2a39f
 ENV COPILOT_VIM_VERSION=1.59.0
 
 # renovate: datasource=github-releases depName=anomalyco/opencode versioning=semver extractVersion=^v(?<version>.*)$
-ENV OPENCODE_VERSION=2.2.7
+ENV OPENCODE_VERSION=2.3.0
 
 # Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -30,9 +30,8 @@ RUN touch /etc/shells
 RUN curl -fsSL -o packages-microsoft-prod.deb https://packages.microsoft.com/config/debian/13/packages-microsoft-prod.deb \
     && dpkg -i packages-microsoft-prod.deb \
     && rm packages-microsoft-prod.deb
-RUN apt-get update && apt-get install -y --no-install-recommends \
-        dotnet-sdk-10.0=10.0.403-1 \
-        powershell=7.6.9-1.deb
+RUN apt-get update && apt-get install -y --no-install-recommends dotnet-sdk-10.0=10.0.404-1 
+RUN apt-get update && apt-get install -y --no-install-recommends powershell=7.6.9-1.deb
 
 # Install copilot.vim plugin for neovim
 RUN curl -L -o /tmp/copilot.vim.tar.gz https://github.com/github/copilot.vim/archive/refs/tags/v${COPILOT_VIM_VERSION}.tar.gz && \
