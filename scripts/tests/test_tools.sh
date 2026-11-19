@@ -9,7 +9,7 @@ t_tool() {
 }
 t_real_tools() {
   local t
-  for t in curl gh pandoc jq; do t_tool "$t"; done
+  for t in curl sed gh pandoc jq; do t_tool "$t"; done
 }
 run_test t_real_tools
 summary
