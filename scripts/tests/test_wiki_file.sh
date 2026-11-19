@@ -22,6 +22,13 @@ t_file_issue() {
   assert_log_has "PUT https://rm.test/issues/3.json"
   assert_eq tok "$(body_of 2 | jq -r '.issue.uploads[0].token')"
 }
+t_file_multi() {
+  echo 1 > a.zip; echo 2 > b.zip
+  respond "POST uploads.json" '{"upload":{"token":"tok"}}'
+  "$SCRIPTS/push_file.sh" a.zip b.zip >/dev/null
+  assert_eq 2 "$(grep -c 'files.json' "$MOCK_LOG")"
+}
+t_file_missing_none_uploaded() { echo 1 > a.zip; assert_fails "$SCRIPTS/push_file.sh" a.zip nope.zip; assert_eq 0 "$(wc -l < "$MOCK_LOG")"; }
 t_file_notoken() { echo d > a; assert_fails "$SCRIPTS/push_file.sh" a; }
-for t in t_wiki t_wiki_missing t_file_project t_file_issue t_file_notoken; do run_test $t; done
+for t in t_wiki t_wiki_missing t_file_project t_file_issue t_file_multi t_file_missing_none_uploaded t_file_notoken; do run_test $t; done
 summary

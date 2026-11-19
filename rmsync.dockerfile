@@ -29,4 +29,4 @@ RUN chown -R 65532:65532 /work && chmod +x /work/*.sh
 # Switch to nonroot user
 USER 65532:65532
 
-ENTRYPOINT ["./redmine_sync.sh"]
+ENTRYPOINT ["/work/redmine_sync.sh"]

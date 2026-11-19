@@ -1,0 +1,67 @@
+# Reusable workflow: write a file's contents to a Redmine wiki page.
+#
+# Example caller:
+#   jobs:
+#     wiki:
+#       permissions: { contents: read, packages: read }
+#       uses: <owner>/<repo>/.github/workflows/update_wiki.yml@main
+#       with:
+#         rm_url: https://redmine.example.com/
+#         rm_project_id: myproject
+#         artifact: wiki                     # artifact containing the file
+#         file: wiki.markdown
+#         page: Renovate_myrepo              # optional; defaults to Renovate_<repo name>
+#       secrets:
+#         rm_key: ${{ secrets.REDMINE_API_KEY }}
+
+name: Update Redmine Wiki
+on:
+  workflow_call:
+    inputs:
+      rm_url:
+        required: true
+        type: string
+      rm_project_id:
+        required: true
+        type: string
+      artifact:
+        description: Name of the artifact containing the wiki file
+        required: true
+        type: string
+      file:
+        description: Path of the wiki content within the artifact
+        required: false
+        default: wiki.markdown
+        type: string
+      page:
+        description: Wiki page name (defaults to Renovate_<repository name>)
+        required: false
+        type: string
+      comment:
+        required: false
+        type: string
+    secrets:
+      rm_key:
+        required: true
+jobs:
+  wiki:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact }}
+          path: .
+
+      - name: Update wiki page
+        uses: docker://ghcr.io/pangaeatech/images/rmsync:v1.0.0
+        with:
+          args: wiki ${{ inputs.file }} ${{ inputs.page }}
+        env:
+          WIKI_COMMENT: ${{ inputs.comment }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          REDMINE_TOKEN: ${{ secrets.rm_key }}
+          RM_URL: ${{ inputs.rm_url }}
+          RM_PROJECT_ID: ${{ inputs.rm_project_id }}

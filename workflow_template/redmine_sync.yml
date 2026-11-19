@@ -1,0 +1,37 @@
+# Keep Redmine in sync with pull requests.
+name: Redmine Sync
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+  pull_request_review:
+    types: [submitted]
+  pull_request:
+    types: [closed, reopened, converted_to_draft, ready_for_review, review_requested, edited]
+
+# One run per PR at a time, so quick successive edits are applied in order.
+concurrency:
+  group: redmine-sync-${{ github.event.pull_request.number || github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+      pull-requests: write
+    steps:
+      - name: Sync with Redmine
+        uses: docker://ghcr.io/pangaeatech/images/rmsync:v1.0.0
+        with:
+          args: sync
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REDMINE_TOKEN: ${{ secrets.REDMINE_API_KEY }}
+          RM_URL: ${{ vars.RM_URL }}
+          RM_PROJECT_ID: ${{ vars.RM_PROJECT_ID }}
+          RM_TRACKER_ID: ${{ vars.RM_TRACKER_ID }}
+          RM_FIELD_ID: ${{ vars.RM_FIELD_ID }}
+          RM_VERSION_ID: ${{ vars.RM_VERSION_ID }}
