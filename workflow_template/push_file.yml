@@ -1,0 +1,77 @@
+# Reusable workflow: upload one or more files to Redmine.
+# The caller uploads the files as an artifact (actions/upload-artifact), then calls this.
+#
+# Example caller:
+#   jobs:
+#     build:
+#       runs-on: ubuntu-latest
+#       steps:
+#         - run: ./build.sh                  # produces dist/app.zip
+#         - uses: actions/upload-artifact@v4
+#           with: { name: dist, path: dist/ }
+#     push:
+#       needs: build
+#       permissions: { contents: read, packages: read }
+#       uses: <owner>/<repo>/.github/workflows/push_file.yml@main
+#       with:
+#         rm_url: https://redmine.example.com/
+#         rm_project_id: myproject
+#         rm_version_id: "10"                # or rm_issue_id: "123"
+#         artifact: dist
+#         files: app.zip
+#       secrets:
+#         rm_key: ${{ secrets.REDMINE_API_KEY }}
+
+name: Push File To Redmine
+on:
+  workflow_call:
+    inputs:
+      rm_url:
+        required: true
+        type: string
+      rm_project_id:
+        description: Project identifier (required unless rm_issue_id is given)
+        required: false
+        type: string
+      rm_version_id:
+        description: Attach under this version's Files section (optional)
+        required: false
+        type: string
+      rm_issue_id:
+        description: Attach to this issue instead of the project Files section (optional)
+        required: false
+        type: string
+      artifact:
+        description: Name of the artifact containing the files
+        required: true
+        type: string
+      files:
+        description: Space separated paths relative to the artifact root (no spaces in names)
+        required: true
+        type: string
+    secrets:
+      rm_key:
+        required: true
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact }}
+          path: .
+
+      # Docker container action: the workspace is mounted as the working directory.
+      - name: Upload files
+        uses: docker://ghcr.io/pangaeatech/images/rmsync:v1.0.0
+        with:
+          args: file ${{ inputs.files }}
+        env:
+          REDMINE_TOKEN: ${{ secrets.rm_key }}
+          RM_URL: ${{ inputs.rm_url }}
+          RM_PROJECT_ID: ${{ inputs.rm_project_id }}
+          RM_VERSION_ID: ${{ inputs.rm_version_id }}
+          RM_ISSUE_ID: ${{ inputs.rm_issue_id }}

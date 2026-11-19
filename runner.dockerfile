@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         pandoc=3.1.11.1+ds-2 \
         zip=3.0-15+deb13u1+dhi1 \
         unzip=6.0-29+deb13u1+dhi1 \
+        gh=2.46.0-3 \
         doxygen=1.9.8+ds-2.1 \
         nodejs-24=24.22.3-0 \
         npm-12=12.2.2-1 \

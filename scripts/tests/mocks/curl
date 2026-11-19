@@ -1,0 +1,30 @@
+#!/bin/bash
+# Mock curl. Logs each call to $MOCK_LOG as one line: "<METHOD> <URL> <BODY>"
+# Responses come from $MOCK_RESPONSES, lines of: "<METHOD> <url-substring>|<response>"
+# (first match wins; default response is "{}").
+method=GET url="" body=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -X) method="$2"; shift ;;
+    --data-binary|-d|--data)
+      if [ "$2" = "@-" ]; then body="$(cat)"
+      elif [[ "$2" == @* ]]; then body="file:${2#@}"
+      else body="$2"; fi
+      shift ;;
+    -H|--header) shift ;;
+    -*) ;;
+    *) url="$1" ;;
+  esac
+  shift
+done
+[ -z "$body" ] || [ "$method" != GET ] || method=POST
+body="$(printf '%s' "$body" | jq -c . 2>/dev/null || printf '%s' "$body")"
+echo "$method $url $body" >> "${MOCK_LOG:?}"
+if [ -f "${MOCK_RESPONSES:-/nonexistent}" ]; then
+  while IFS= read -r line; do
+    key="${line%%|*}"; resp="${line#*|}"
+    m="${key%% *}"; sub="${key#* }"
+    if [ "$m" = "$method" ] && [[ "$url" == *"$sub"* ]]; then echo "$resp"; exit 0; fi
+  done < "$MOCK_RESPONSES"
+fi
+echo '{}'
