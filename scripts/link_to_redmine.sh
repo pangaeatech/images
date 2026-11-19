@@ -1,90 +1,52 @@
+#!/bin/bash
 set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB="${RM_LIB_DIR:-$HERE/lib}"
+# shellcheck source=lib/common.sh
+. "$LIB/common.sh"
+# shellcheck source=lib/platform.sh
+. "$LIB/platform.sh"
 
-if [ -z "${GITLAB_TOKEN:-}" ]; then
-  echo "❌ GITLAB_TOKEN not set. Exiting."
-  exit 1
+# Links a PR/MR to Redmine.
+#  - branch named task|issue|bug<N>-...  -> link to existing Redmine issue N
+#  - otherwise                           -> create a new Redmine issue
+# Idempotent: if an issue already carries this PR number, nothing is created
+# (bot branches get their subject/description refreshed instead).
+#
+# Env: RM_URL REDMINE_TOKEN RM_PROJECT_ID RM_FIELD_ID RM_TRACKER_ID RM_VERSION_ID
+#      [RM_SUFFIX] [RM_PR_PREFIX] [DRAFT_PREFIX], plus PR_* (see lib/platform.sh)
+
+rm_init
+load_context
+require_vars RM_PROJECT_ID RM_FIELD_ID PR_NUM PR_URL
+
+existing="$(rm_find_issues)"
+if [ -n "$existing" ]; then
+  echo "PR $PR_NUM already linked to Redmine issue(s): $(echo $existing). Skipping linking."
+  if is_bot_branch "${PR_BRANCH:-}"; then
+    exec "$HERE/sync_to_redmine.sh" edit
+  fi
+  exit 0
 fi
 
-echo "Checking labels for MR $CI_MERGE_REQUEST_IID..."
-
-MR_JSON=$(curl -fsS --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-    "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID")
-LABELS=$(echo "$MR_JSON" | jq -r '.labels[]')
-
-echo "Labels: $LABELS"
-
-PR_NUM="${RM_PR_PREFIX}$CI_MERGE_REQUEST_IID"
-PR_URL="$CI_PROJECT_URL/-/merge_requests/$CI_MERGE_REQUEST_IID"
-
-if echo "$LABELS" | grep -iq "redmine"; then
-    echo "Merge Request already labeled 'redmine'. Skipping Redmine linking."
-
-    case "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" in
-      # If the source branch is a bot branch, update the Redmine issue # with the new PR info
-      dependabot/*)
-      renovate/*)
-      whitesource/*)
-        SUBJ=$(echo "$MR_JSON" | jq -r '.title' | sed -e 's/^Draft: //I')
-        PR_BODY=$(echo "$MR_JSON" | jq -r '.description // ""')
-        BODY=$(printf 'Linked to [Pull Request %s](%s)\n\n%s\n' "$PR_NUM" "$PR_URL" "$PR_BODY" | pandoc -f gfm -t html | pandoc -f html -t textile | sed -e 's/<tt>/<code>/g' -e 's/<\/tt>/<\/code>/g' -e 's/<hr *\/>/----/g' -e 's/[^ -~].../?/g')
-    
-        curl -fsS -X GET -H "X-REDMINE-API-KEY: ${REDMINE_TOKEN}" \
-            "$RM_URL/issues.json?project_id=${RM_PROJECT_ID}&cf_${RM_FIELD_ID}=${PR_NUM}&status_id=*" > issues.txt
-        jq --null-input --arg key "$REDMINE_TOKEN" --arg subj "$SUBJ${RM_SUFFIX:-}" --arg desc "$BODY" '{key:$key,issue:{subject:$subj,description:$desc}}' > body.json
-        for RM_ISSUE in $(cat issues.txt | jq '.issues[]?.id'); do
-            curl -fsS -X PUT -H "Content-Type: application/json" -d "@body.json" "${RM_URL}/issues/${RM_ISSUE}.json";
-        done
-        ;;
-    esac
-
-    exit 0
-fi
-
-RM_ISSUE=$(echo "$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME" | sed -n -E 's/^(task|issue|bug)([0-9]+)-.*$/\2/pI')
-echo "RM Issue: $RM_ISSUE"
-
-if [ -n "$RM_ISSUE" ]; then 
-    echo "Linking MR to Redmine issue $RM_ISSUE"
-
-    BODY=$(echo "Linked to \"Pull Request $PR_NUM\":$PR_URL")
-    jq --null-input \
-        --arg key "$REDMINE_TOKEN" \
-        --arg body "$BODY" \
-        --arg prnum "$PR_NUM" \
-        --arg fld "$RM_FIELD_ID" \
-        '{key:$key,issue:{notes:$body,custom_fields:[{value:$prnum,id:$fld}]}}' > body.json
-    curl -fsS -X PUT -H "Content-Type: application/json" -d "@body.json" "${RM_URL}/issues/${RM_ISSUE}.json"
+issue="$(branch_issue "${PR_BRANCH:-}")"
+if [ -n "$issue" ]; then
+  echo "Linking PR to Redmine issue $issue"
+  $JQ -n --arg body "Linked to \"Pull Request $PR_NUM\":$PR_URL" --arg prnum "$PR_NUM" --arg fld "$RM_FIELD_ID" \
+    '{issue:{notes:$body,custom_fields:[{value:$prnum,id:$fld}]}}' | rm_send PUT "issues/${issue}.json"
+  pr_comment "Linked to [Redmine Task ${issue}]($RM_URL/issues/${issue})"
 else
-    echo "Creating new Redmine issue..."
-    SUBJ=$(echo "$MR_JSON" | jq -r '.title' | sed -e 's/^Draft: //I')
-    PR_BODY=$(echo "$MR_JSON" | jq -r '.description // ""')
-    BODY=$(printf 'Linked to [Pull Request %s](%s)\n\n%s\n' "$PR_NUM" "$PR_URL" "$PR_BODY" | pandoc -f gfm -t html | pandoc -f html -t textile | sed -e 's/<tt>/<code>/g' -e 's/<\/tt>/<\/code>/g' -e 's/<hr *\/>/----/g' -e 's/[^ -~].../?/g')
-    jq --null-input \
-        --arg key "$REDMINE_TOKEN" \
-        --arg subj "$SUBJ${RM_SUFFIX:-}" \
-        --arg desc "$BODY" \
-        --arg proj "$RM_PROJECT_ID" \
-        --arg trac "$RM_TRACKER_ID" \
-        --arg vers "$RM_VERSION_ID" \
-        --arg prnum "$PR_NUM" \
-        --arg fld "$RM_FIELD_ID" \
-        '{key:$key,issue:{project_id:$proj,tracker_id:$trac,subject:$subj,description:$desc,fixed_version_id:$vers,custom_fields:[{value:$prnum,id:$fld}]}}' > body.json
-    curl -fsS -X POST -H "Content-Type: application/json" -d "@body.json" "$RM_URL/issues.json" > issue.txt
-
-    TaskId=$(cat issue.txt | jq '.issue.id')
-    if [ -z "$TaskId" -o "$TaskId" = "null" ]; then
-        cat issue.txt
-        exit 1
-    else
-        curl -fsS --request POST --header "PRIVATE-TOKEN: $GITLAB_TOKEN" --header "Content-Type: application/json" \
-            --data "{\"body\": \"Added as [Redmine Task $TaskId]($RM_URL/issues/$TaskId)\"}" \
-            "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/notes"
-    fi;
+  require_vars RM_TRACKER_ID PR_SUBJECT
+  echo "Creating new Redmine issue..."
+  subj="$(printf '%s' "$PR_SUBJECT" | strip_prefix "$DRAFT_PREFIX")${RM_SUFFIX:-}"
+  desc="$(pr_description)"
+  resp="$($JQ -n --arg subj "$subj" --arg desc "$desc" --arg proj "$RM_PROJECT_ID" \
+      --arg trac "$RM_TRACKER_ID" --arg vers "${RM_VERSION_ID:-}" --arg prnum "$PR_NUM" --arg fld "$RM_FIELD_ID" \
+      '{issue:({project_id:$proj,tracker_id:$trac,subject:$subj,description:$desc,custom_fields:[{value:$prnum,id:$fld}]}
+        + (if $vers == "" then {} else {fixed_version_id:$vers} end))}' | rm_send POST issues.json)"
+  issue="$(printf '%s' "$resp" | $JQ -r '.issue.id // empty')"
+  [ -n "$issue" ] || { echo "$resp" >&2; die "Redmine did not return an issue id"; }
+  pr_comment "Added as [Redmine Task $issue]($RM_URL/issues/$issue)"
 fi
 
-echo "Adding 'redmine' label to MR..."
-UPDATED_LABELS="$(echo "$LABELS" | tr '\n' ',' | sed 's/,$//'),redmine"
-curl -fsS --request PUT --header "PRIVATE-TOKEN: $GITLAB_TOKEN" \
-  --header "Content-Type: application/json" \
-  --data "{\"labels\": \"$UPDATED_LABELS\"}" \
-  "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID"
+pr_draft_and_retitle

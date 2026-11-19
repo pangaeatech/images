@@ -1,8 +1,40 @@
-# Arguments: the file to push ($FILEPATH), the redmine URL ($RM_URL) and authentication ($REDMINE_TOKEN), The project ID ($RM_PROJECT_ID) and the version ID ($RM_VERSION_ID) or issue ID ($RM_ISSUE_ID).  
-# If an Issue ID is specified, then the file is attached to that issue.
-# If a Version ID is specified, then the file is attached to that version in the "Files" section.
-# If neither an Issue ID nor a Version ID is specified, then the file is attached to the project in the "Files" section but with no version specified.
-# This script supports pushing files to Redmine using the REST API and can support files up to 2GB in size (if supported by the Redmine server configuration).
+#!/bin/bash
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB="${RM_LIB_DIR:-$HERE/lib}"
+# shellcheck source=lib/common.sh
+. "$LIB/common.sh"
+# shellcheck source=lib/platform.sh
+. "$LIB/platform.sh"
 
-# TODO
-exit 1;
+# Uploads a file to Redmine (up to the server's attachment size limit).
+# Usage: push_file.sh [FILE]      (or FILEPATH env)
+# Env:   RM_URL REDMINE_TOKEN, and one target:
+#   RM_ISSUE_ID                -> attach to that issue
+#   RM_PROJECT_ID [+ RM_VERSION_ID] -> project "Files", optionally under a version
+# Issue wins over version/project when several are given.
+
+file="${1:-${FILEPATH:-}}"
+rm_init
+require_vars file
+[ -f "$file" ] || die "File '$file' not found"
+name="$(basename "$file")"
+ctype="${FILE_CONTENT_TYPE:-application/octet-stream}"
+
+# Step 1: upload the bytes, receive a token
+upload="$($CURL -fsS -X POST -H "X-Redmine-API-Key: ${REDMINE_TOKEN}" -H "Content-Type: application/octet-stream" \
+  --data-binary "@${file}" "$RM_URL/uploads.json?filename=$($JQ -rn --arg n "$name" '$n|@uri')")"
+token="$(printf '%s' "$upload" | $JQ -r '.upload.token // empty')"
+[ -n "$token" ] || { echo "$upload" >&2; die "Redmine did not return an upload token"; }
+
+# Step 2: attach the token
+if [ -n "${RM_ISSUE_ID:-}" ]; then
+  $JQ -n --arg t "$token" --arg n "$name" --arg c "$ctype" \
+    '{issue:{uploads:[{token:$t,filename:$n,content_type:$c}]}}' | rm_send PUT "issues/${RM_ISSUE_ID}.json" >/dev/null
+else
+  require_vars RM_PROJECT_ID
+  $JQ -n --arg t "$token" --arg n "$name" --arg v "${RM_VERSION_ID:-}" \
+    '{file:({token:$t,filename:$n} + (if $v == "" then {} else {version_id:$v} end))}' \
+    | rm_send POST "projects/${RM_PROJECT_ID}/files.json" >/dev/null
+fi
+echo "Uploaded $name"

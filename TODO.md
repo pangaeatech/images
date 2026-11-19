@@ -1,0 +1,2 @@
+- Draft handling: it only applies on GitHub. GitLab handles Draft: itself.
+- Next step: replace the embedded bash in those workflows with calls to the rmsync image, for example docker run … rmsync link. auto-add-pr.yml stays as a separate workflow.

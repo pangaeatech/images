@@ -1,0 +1,2 @@
+#!/bin/bash
+echo "gh $*" >> "${MOCK_LOG:?}"

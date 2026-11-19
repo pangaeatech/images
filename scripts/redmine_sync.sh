@@ -1,24 +1,57 @@
 #!/bin/bash
 set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB="${RM_LIB_DIR:-$HERE/lib}"
+# shellcheck source=lib/common.sh
+. "$LIB/common.sh"
 
-### This is a bash script which supports pushing data to and from Redmine from github actions.
-###  - This script is designed to be run on every trigger supported by github actions and be a no-op if the trigger is not supported.
-###     - This allows for a single script to be used in multiple workflows, and for workflows to be triggered by multiple events.
-###     - This also allows this script to add more functionality in the future without having to modify existing workflows.
-### It supports the following commands:
-###  - link: Links the specified GitHub Pull Request to the specified Redmine issue. (calls link_to_redmine.sh)
-###     - Should support everything in workflows/link-to-redmine.yml
-###     - Should support everything in workflows/add-to-redmine.yml
-###     - Should support everything in workflows/auto-add-to-pr-and-redmine.yml *except* for what's in workflows/auto-add-pr.yml (which will be run separately)
-###  - sync: Updates the previously linked Redmine issue with the latest information from the GitHub Pull Request. (calls sync_to_redmine.sh)
-###     - Should support everything in workflows/edit-redmine.yml and workflows/update-redmine.yml
-###  - wiki: Updates the specified Redmine Wiki page with the specified content. (calls update_wiki.sh)
-###  - file: Uploads the specified file to the specified Redmine project. (calls push_file.sh)
+### Single entrypoint for Redmine synchronisation from GitHub Actions or GitLab CI.
+### Safe to call from any trigger: unsupported events are a no-op (exit 0).
+###  link          PR opened/reopened   -> link_to_redmine.sh (link to or create an issue)
+###  sync          PR edited            -> sync_to_redmine.sh edit
+###                review submitted     -> sync_to_redmine.sh note
+###                PR closed            -> sync_to_redmine.sh note (merged/closed)
+###  wiki [F] [P]                      -> update_wiki.sh
+###  file [F]                          -> push_file.sh
+### (Auto-creating the PR itself is left to workflows/auto-add-pr.yml.)
+### GitLab merge_request_event pipelines map to "opened" (link) / "edited" (sync).
 
-echo "Starting Redmine synchronization..."
+cmd="${1:-}"; [ $# -eq 0 ] || shift
+echo "Starting Redmine synchronization ($cmd)..."
 
-echo "You passed the arguments: "
-echo "$@"
+# event_action : print "<event>:<action>" normalised across platforms
+event_action() {
+  if [ -n "${EVENT_ACTION:-}" ]; then echo "$EVENT_ACTION"; return; fi
+  if [ "${GITHUB_ACTIONS:-}" = "true" ] && [ -n "${GITHUB_EVENT_PATH:-}" ]; then
+    echo "${GITHUB_EVENT_NAME:-}:$($JQ -r '.action // empty' "$GITHUB_EVENT_PATH")"
+  elif [ "${CI_PIPELINE_SOURCE:-}" = "merge_request_event" ]; then
+    echo "merge_request:opened"
+  fi
+}
 
-# TODO
-exit -1
+case "$cmd" in
+  link)
+    case "$(event_action)" in
+      pull_request:opened|pull_request:reopened|merge_request:opened|manual:*)
+        exec "$HERE/link_to_redmine.sh" "$@" ;;
+      *) echo "Event '$(event_action)' not supported for link; nothing to do." ;;
+    esac ;;
+  sync)
+    case "$(event_action)" in
+      pull_request:edited|manual:edit)
+        exec "$HERE/sync_to_redmine.sh" edit ;;
+      pull_request_review:submitted|manual:note)
+        exec "$HERE/sync_to_redmine.sh" note ;;
+      pull_request:closed)
+        if [ "$($JQ -r '.pull_request.merged' "$GITHUB_EVENT_PATH")" = "true" ]; then
+          export CMT_ACTION=merged; else export CMT_ACTION=closed; fi
+        export CMT_USER="${CMT_USER:-$($JQ -r '.sender.login' "$GITHUB_EVENT_PATH")}"
+        export CMT_URL="${CMT_URL:-$($JQ -r '.pull_request.html_url' "$GITHUB_EVENT_PATH")}"
+        export CMT_BODY=""
+        exec "$HERE/sync_to_redmine.sh" note ;;
+      *) echo "Event '$(event_action)' not supported for sync; nothing to do." ;;
+    esac ;;
+  wiki) exec "$HERE/update_wiki.sh" "$@" ;;
+  file) exec "$HERE/push_file.sh" "$@" ;;
+  *) echo "Usage: $0 link|sync|wiki|file [args]" >&2; exit 2 ;;
+esac

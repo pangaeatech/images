@@ -17,11 +17,11 @@ RUN mkdir -p /work && chown nonroot:nonroot /work
 WORKDIR /work
 
 # Install Redmine Sync script
-COPY scripts/redmine_sync.sh /work/entrypoint.sh
-RUN chown 65532:65532 /work/entrypoint.sh
-RUN chmod +x /work/entrypoint.sh
+COPY scripts/*.sh /work/
+COPY scripts/lib/ /work/lib/
+RUN chown -R 65532:65532 /work && chmod +x /work/*.sh
 
 # Switch to nonroot user
 USER 65532:65532
 
-ENTRYPOINT ["./entrypoint.sh"]
+ENTRYPOINT ["./redmine_sync.sh"]
