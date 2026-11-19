@@ -7,14 +7,16 @@ LIB="${RM_LIB_DIR:-$HERE/lib}"
 
 ### Single entrypoint for Redmine synchronisation from GitHub Actions or GitLab CI.
 ### Safe to call from any trigger: unsupported events are a no-op (exit 0).
-###  link          PR opened/reopened   -> link_to_redmine.sh (link to or create an issue)
-###  sync          PR edited            -> sync_to_redmine.sh edit
+###  sync          chooses the action from the triggering event:
+###                PR opened/reopened   -> link_to_redmine.sh (link to or create an issue)
+###                PR edited            -> sync_to_redmine.sh edit
 ###                review submitted     -> sync_to_redmine.sh note
 ###                PR closed            -> sync_to_redmine.sh note (merged/closed)
 ###  wiki [F] [P]                      -> update_wiki.sh
 ###  file [F]                          -> push_file.sh
 ### (Auto-creating the PR itself is left to workflows/auto-add-pr.yml.)
-### GitLab merge_request_event pipelines map to "opened" (link) / "edited" (sync).
+### GitLab merge_request_event pipelines map to "opened" (link).
+### EVENT_ACTION=<event>:<action> overrides detection (manual:link, manual:edit, manual:note).
 
 cmd="${1:-}"; [ $# -eq 0 ] || shift
 echo "Starting Redmine synchronization ($cmd)..."
@@ -30,14 +32,10 @@ event_action() {
 }
 
 case "$cmd" in
-  link)
-    case "$(event_action)" in
-      pull_request:opened|pull_request:reopened|merge_request:opened|manual:*)
-        exec "$HERE/link_to_redmine.sh" "$@" ;;
-      *) echo "Event '$(event_action)' not supported for link; nothing to do." ;;
-    esac ;;
   sync)
     case "$(event_action)" in
+      pull_request:opened|pull_request:reopened|merge_request:opened|manual:link)
+        exec "$HERE/link_to_redmine.sh" ;;
       pull_request:edited|manual:edit)
         exec "$HERE/sync_to_redmine.sh" edit ;;
       pull_request_review:submitted|manual:note)
@@ -53,5 +51,5 @@ case "$cmd" in
     esac ;;
   wiki) exec "$HERE/update_wiki.sh" "$@" ;;
   file) exec "$HERE/push_file.sh" "$@" ;;
-  *) echo "Usage: $0 link|sync|wiki|file [args]" >&2; exit 2 ;;
+  *) echo "Usage: $0 sync|wiki|file [args]" >&2; exit 2 ;;
 esac

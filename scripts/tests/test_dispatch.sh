@@ -1,12 +1,18 @@
 . "$(dirname "$0")/lib.sh"
 D="$SCRIPTS/redmine_sync.sh"
 
-t_noop() { EVENT_ACTION=push:none "$D" link >/dev/null; "$D" sync >/dev/null; assert_eq 0 "$(wc -l < "$MOCK_LOG")"; }
+t_noop() { EVENT_ACTION=push:none "$D" sync >/dev/null; "$D" sync >/dev/null; assert_eq 0 "$(wc -l < "$MOCK_LOG")"; }
 t_link() {
   respond "GET issues.json" '{"issues":[]}'; respond "POST issues.json" '{"issue":{"id":1}}'
-  EVENT_ACTION=pull_request:opened "$D" link >/dev/null
+  EVENT_ACTION=pull_request:opened "$D" sync >/dev/null
   assert_log_has "POST https://rm.test/issues.json"
 }
+t_reopened() {
+  respond "GET issues.json" '{"issues":[]}'; respond "POST issues.json" '{"issue":{"id":1}}'
+  EVENT_ACTION=pull_request:reopened "$D" sync >/dev/null
+  assert_log_has "POST https://rm.test/issues.json"
+}
+t_link_removed() { assert_fails "$D" link; }
 t_sync_edit() {
   respond "GET issues.json" '{"issues":[{"id":5}]}'
   EVENT_ACTION=pull_request:edited "$D" sync >/dev/null
@@ -19,5 +25,5 @@ t_review_event() {
   assert_eq "[amy approved](http://r)" "$(body_of 2 | jq -r .issue.notes | head -1)"
 }
 t_usage() { assert_fails "$D" bogus; }
-for t in t_noop t_link t_sync_edit t_review_event t_usage; do run_test $t; done
+for t in t_noop t_reopened t_link_removed t_link t_sync_edit t_review_event t_usage; do run_test $t; done
 summary
