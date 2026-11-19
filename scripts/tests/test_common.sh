@@ -6,6 +6,9 @@ t_prefix() {
   assert_eq "Fix" "$(printf 'Fix' | strip_prefix 'WIP ')"
   has_prefix "Draft: x" "draft: " && ok || nok has_prefix
   has_prefix "x" "" && nok empty-prefix || ok
+  assert_eq "Fix" "$(printf 'Draft: Fix' | DRAFT_PREFIX='WIP ' strip_draft_prefix)"
+  assert_eq "Fix" "$(printf 'WIP: Fix' | strip_draft_prefix)"
+  has_draft_prefix "WIP Fix" && ok || nok has_draft_prefix
 }
 t_branch() {
   assert_eq 42 "$(branch_issue 'Task42-foo')"

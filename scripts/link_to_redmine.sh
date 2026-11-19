@@ -22,11 +22,8 @@ require_vars RM_PROJECT_ID RM_FIELD_ID PR_NUM PR_URL
 
 existing="$(rm_find_issues)"
 if [ -n "$existing" ]; then
-  echo "PR $PR_NUM already linked to Redmine issue(s): $(echo $existing). Skipping linking."
-  if is_bot_branch "${PR_BRANCH:-}"; then
-    exec "$HERE/sync_to_redmine.sh" edit
-  fi
-  exit 0
+  echo "PR $PR_NUM already linked to Redmine issue(s): $(echo $existing). Refreshing."
+  exec "$HERE/sync_to_redmine.sh" edit
 fi
 
 issue="$(branch_issue "${PR_BRANCH:-}")"
@@ -38,7 +35,7 @@ if [ -n "$issue" ]; then
 else
   require_vars RM_TRACKER_ID PR_SUBJECT
   echo "Creating new Redmine issue..."
-  subj="$(printf '%s' "$PR_SUBJECT" | strip_prefix "$DRAFT_PREFIX")${RM_SUFFIX:-}"
+  subj="$(printf '%s' "$PR_SUBJECT" | strip_draft_prefix)${RM_SUFFIX:-}"
   desc="$(pr_description)"
   resp="$($JQ -n --arg subj "$subj" --arg desc "$desc" --arg proj "$RM_PROJECT_ID" \
       --arg trac "$RM_TRACKER_ID" --arg vers "${RM_VERSION_ID:-}" --arg prnum "$PR_NUM" --arg fld "$RM_FIELD_ID" \
