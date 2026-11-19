@@ -11,7 +11,7 @@ RUN apk add --no-cache \
         pandoc-cli=3.10-r0 \
         zip=3.0-r13 \
         unzip=6.0-r16 \
-        github-cli=2.103.3-r0
+        github-cli=2.97.0-r2
 
 # Creates work directory (if it does not exist) 
 RUN mkdir -p /work && chown nonroot:nonroot /work
