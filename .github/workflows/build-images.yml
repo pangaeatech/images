@@ -55,7 +55,7 @@ jobs:
         run: |
           echo "Building image ${{ matrix.dockerfile }}"
 
-          docker buildx build --file "${{ matrix.dockerfile }}.dockerfile" .
+          docker buildx build --attest=type=provenance,mode=max --file "${{ matrix.dockerfile }}.dockerfile" .
 
       - name: Build and Push ${{ matrix.dockerfile }}
         if: github.ref_type == 'tag'
@@ -63,4 +63,4 @@ jobs:
           tag=${GITHUB_REF#refs/tags/v}
           echo "Building and pushing image ${{ matrix.dockerfile }} for tag $tag"
 
-          docker buildx build --file "${{ matrix.dockerfile }}.dockerfile" --push --tag "ghcr.io/${{ github.repository }}/${{ matrix.dockerfile }}:${tag}" .
+          docker buildx build --attest=type=provenance,mode=max --file "${{ matrix.dockerfile }}.dockerfile" --push --tag "ghcr.io/${{ github.repository }}/${{ matrix.dockerfile }}:${tag}" .
