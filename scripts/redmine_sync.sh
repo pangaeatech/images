@@ -37,7 +37,7 @@ event_action() {
 case "$cmd" in
   sync)
     case "$(event_action)" in
-      pull_request:opened|pull_request:reopened|pull_request:edited|pull_request:converted_to_draft|pull_request:ready_for_review|pull_request:review_requested|merge_request:opened|merge_request:reopened|merge_request:updated|merge_request:edited|merge_request:converted_to_draft|merge_request:ready_for_review|manual:link)
+      pull_request:opened|pull_request:reopened|pull_request:edited|pull_request:synchronize|pull_request:converted_to_draft|pull_request:ready_for_review|pull_request:review_requested|merge_request:opened|merge_request:reopened|merge_request:updated|merge_request:edited|merge_request:converted_to_draft|merge_request:ready_for_review|manual:link)
         exec "$HERE/link_to_redmine.sh" ;;
       manual:edit)
         exec "$HERE/sync_to_redmine.sh" edit ;;

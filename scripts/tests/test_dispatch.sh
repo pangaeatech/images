@@ -26,6 +26,11 @@ t_draft_events() {
   EVENT_ACTION=pull_request:ready_for_review "$D" sync >/dev/null
   assert_log_has "PUT https://rm.test/issues/5.json"
 }
+t_synchronize() {
+  respond "GET issues.json" '{"issues":[{"id":5}]}'
+  EVENT_ACTION=pull_request:synchronize "$D" sync >/dev/null
+  assert_log_has "PUT https://rm.test/issues/5.json"
+}
 t_gitlab_update() {
   respond "GET merge_requests/41" '{"title":"Draft: Fix thing","description":"body text","draft":true}'
   respond "GET issues.json" '{"issues":[{"id":5}]}'
@@ -55,5 +60,5 @@ t_review_event() {
   assert_eq "[amy approved](http://r)" "$(body_of 2 | jq -r .issue.notes | head -1)"
 }
 t_usage() { assert_fails "$D" bogus; }
-for t in t_noop t_reopened t_link_removed t_link t_sync_edit t_draft_events t_gitlab_update t_gitlab_closed t_review_event t_usage; do run_test $t; done
+for t in t_noop t_reopened t_link_removed t_link t_sync_edit t_draft_events t_synchronize t_gitlab_update t_gitlab_closed t_review_event t_usage; do run_test $t; done
 summary

@@ -23,7 +23,9 @@ require_vars RM_PROJECT_ID RM_FIELD_ID PR_NUM PR_URL
 existing="$(rm_find_issues)"
 if [ -n "$existing" ]; then
   echo "PR $PR_NUM already linked to Redmine issue(s): $(echo $existing). Refreshing."
-  exec "$HERE/sync_to_redmine.sh" edit
+  "$HERE/sync_to_redmine.sh" edit
+  pr_draft_and_retitle
+  exit 0
 fi
 
 issue="$(branch_issue "${PR_BRANCH:-}")"

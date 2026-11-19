@@ -28,6 +28,13 @@ t_existing_refresh() {
   assert_eq 3 "$(wc -l < "$MOCK_LOG")"
   assert_log_has "PUT https://rm.test/issues/5.json"
 }
+t_existing_legacy_draft() {
+  respond "GET issues.json" '{"issues":[{"id":5}]}'
+  PR_SUBJECT="WIP Fix thing" "$L" >/dev/null
+  assert_log_has "PUT https://rm.test/issues/5.json"
+  assert_log_has "gh pr ready https://gh/pr/7 --undo"
+  assert_log_has "gh pr edit https://gh/pr/7 --title Fix thing"
+}
 t_bot_refresh() {
   respond "GET issues.json" '{"issues":[{"id":5}]}'
   PR_BRANCH=renovate/foo "$L" >/dev/null
@@ -43,5 +50,5 @@ t_native_draft() {
 }
 t_no_tracker() { unset RM_TRACKER_ID; respond "GET issues.json" '{"issues":[]}'; assert_fails "$L"; }
 t_no_id() { respond "GET issues.json" '{"issues":[]}'; respond "POST issues.json" '{"error":1}'; assert_fails "$L"; }
-for t in t_create t_link_branch t_existing_refresh t_bot_refresh t_native_draft t_no_tracker t_no_id; do run_test $t; done
+for t in t_create t_link_branch t_existing_refresh t_existing_legacy_draft t_bot_refresh t_native_draft t_no_tracker t_no_id; do run_test $t; done
 summary
