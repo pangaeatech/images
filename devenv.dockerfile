@@ -4,7 +4,7 @@ FROM dhi.io/debian-base:trixie-debian13-dev@sha256:f90fd43cdf3dd94840b4dc3a2a39f
 ENV COPILOT_VIM_VERSION=1.59.0
 
 # renovate: datasource=npm depName=opencode-ai
-ENV OPENCODE_VERSION=1.18.31
+ENV OPENCODE_VERSION=1.19.5
 
 # Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -44,7 +44,7 @@ RUN curl -L -o /tmp/copilot.vim.tar.gz https://github.com/github/copilot.vim/arc
     rm /tmp/copilot.vim.tar.gz
 
 # Install opencode
-RUN npm install -g opencode-ai@${OPENCODE_VERSION}
+RUN npm install -g opencode-ai@${OPENCODE_VERSION} --allow-scripts opencode-ai
 
 # Delete apt cache to reduce image size
 RUN rm -Rf /var/lib/apt/lists/*
