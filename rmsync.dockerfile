@@ -1,4 +1,4 @@
-FROM dhi.io/node:26-alpine-dev@sha256:4ae4a2b1bb72ce18f187d03a5112b738b5b02d85f9d33d53883a4ade7b511ba4
+FROM dhi.io/node:26.13.1-alpine-dev@sha256:4ae4a2b1bb72ce18f187d03a5112b738b5b02d85f9d33d53883a4ade7b511ba4
 
 # Enable community repository for pandoc
 RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.24/community" >> /etc/apk/repositories 
