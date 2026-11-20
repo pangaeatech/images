@@ -4,7 +4,7 @@ FROM dhi.io/debian-base:trixie-debian13-dev@sha256:f90fd43cdf3dd94840b4dc3a2a39f
 ENV COPILOT_VIM_VERSION=1.59.0
 
 # renovate: datasource=npm depName=opencode-ai
-ENV OPENCODE_VERSION=1.18.31
+ENV OPENCODE_VERSION=1.19.5
 
 # Install dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
