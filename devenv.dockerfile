@@ -24,7 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         python3-venv=3.13.5-1+deb13u0+dhi0 \
         python3-dev=3.13.5-1+deb13u0+dhi0 \
         python3-poetry=2.1.2+dfsg-1+deb13u1 \
-        neovim=0.10.4-8
+        neovim=0.10.4-8 \
+        rcm=1.3.4-1 \
+        hub=2.14.2~ds1-1+b23
 
 # Install .NET SDK
 RUN touch /etc/shells
@@ -49,11 +51,19 @@ RUN curl -L -o /tmp/opencode.deb https://github.com/anomalyco/opencode/releases/
 # Delete apt cache to reduce image size
 RUN rm -Rf /var/lib/apt/lists/*
 
-# Creates work directory (if it does not exist) 
-RUN mkdir -p /work && chown nonroot:nonroot /work
-WORKDIR /work
+# Setup home
+COPY scripts/devenv-bash.sh /etc/bash_bootstrap
+RUN echo '. /etc/bash_bootstrap' >> /etc/bash.bashrc
+
+# Creates work directory and setup permissions
+RUN mkdir -p /home/nonroot/work \
+    && chmod -R 666 /home/nonroot \
+    && chmod 777 /home/nonroot \
+    && chmod 777 /home/nonroot/work
+
+WORKDIR /home/nonroot/work
 
 # Switch to nonroot user
-USER 65532:65532
+USER 1000:1000
 
 CMD ["/bin/bash"]
