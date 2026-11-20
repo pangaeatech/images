@@ -44,7 +44,7 @@ RUN curl -L -o /tmp/copilot.vim.tar.gz https://github.com/github/copilot.vim/arc
     rm /tmp/copilot.vim.tar.gz
 
 # Install opencode
-RUN npm install -g opencode-ai@${OPENCODE_VERSION}
+RUN npm install -g opencode-ai@${OPENCODE_VERSION} --allow-scripts opencode-ai
 
 # Delete apt cache to reduce image size
 RUN rm -Rf /var/lib/apt/lists/*
