@@ -21,7 +21,7 @@ require_vars RM_PROJECT_ID RM_FIELD_ID PR_NUM
 case "$mode" in
   edit)
     require_vars PR_SUBJECT PR_URL
-    subj="$(printf '%s' "$PR_SUBJECT" | strip_prefix "$DRAFT_PREFIX")${RM_SUFFIX:-}"
+    subj="$(printf '%s' "$PR_SUBJECT" | strip_draft_prefix)${RM_SUFFIX:-}"
     payload="$($JQ -n --arg subj "$subj" --arg desc "$(pr_description)" \
       '{issue:{subject:$subj,description:$desc}}')" ;;
   note)

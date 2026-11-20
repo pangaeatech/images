@@ -66,6 +66,23 @@ strip_prefix() {
 # has_prefix STRING PREFIX
 has_prefix() { [ -n "$2" ] && [[ "${1,,}" == "${2,,}"* ]]; }
 
+# strip_draft_prefix : stdin -> stdout with a recognised draft marker removed
+strip_draft_prefix() {
+  local p s
+  s="$(cat)"
+  for p in "${DRAFT_PREFIX:-}" "Draft: " "Draft " "[Draft] " "WIP: " "WIP "; do
+    if [ -n "$p" ] && [[ "${s,,}" == "${p,,}"* ]]; then
+      s="${s:${#p}}"
+      break
+    fi
+  done
+  printf '%s' "$s"
+}
+
+has_draft_prefix() {
+  [ "$(printf '%s' "$1" | strip_draft_prefix)" != "$1" ]
+}
+
 # branch_issue BRANCH : print N if BRANCH looks like task|issue|bug<N>-...
 branch_issue() {
   printf '%s\n' "$1" | $SED -n -E 's/^(task|issue|bug)([0-9]+)-.*$/\2/pI'

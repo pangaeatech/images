@@ -8,7 +8,7 @@ on:
   pull_request_review:
     types: [submitted]
   pull_request:
-    types: [closed, reopened, converted_to_draft, ready_for_review, review_requested, edited]
+    types: [opened, closed, reopened, synchronize, converted_to_draft, ready_for_review, review_requested, edited]
 
 # One run per PR at a time, so quick successive edits are applied in order.
 concurrency:

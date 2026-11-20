@@ -27,6 +27,7 @@ load_context() {
       : "${PR_SUBJECT:=$(ev .pull_request.title)}"
       : "${PR_BODY:=$(ev .pull_request.body)}"
       : "${PR_BRANCH:=$(ev .pull_request.head.ref)}"
+      : "${PR_DRAFT:=$(ev .pull_request.draft)}"
       : "${CMT_URL:=$(ev .review.html_url)}"
       : "${CMT_USER:=$(ev .review.user.login)}"
       : "${CMT_BODY:=$(ev .review.body)}"
@@ -38,10 +39,13 @@ load_context() {
       local mr
       mr=$($CURL -fsS --header "$(GITLAB_CURL_AUTH)" \
         "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$PR_ID")
-      PR_URL="${CI_PROJECT_URL:-}/-/merge_requests/$PR_ID"
+      PR_URL=$(printf '%s' "$mr" | $JQ -r '.web_url // empty')
+      PR_URL="${PR_URL:-${CI_PROJECT_URL:-}/-/merge_requests/$PR_ID}"
       PR_SUBJECT=$(printf '%s' "$mr" | $JQ -r '.title')
       PR_BODY=$(printf '%s' "$mr" | $JQ -r '.description // ""')
       PR_BRANCH="${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-}"
+      PR_DRAFT=$(printf '%s' "$mr" | $JQ -r '.draft // false')
+      CMT_URL="${CMT_URL:-$PR_URL}"
       ;;
     none) : ;;
     *) die "Unknown PLATFORM '$PLATFORM'" ;;
@@ -62,11 +66,11 @@ pr_comment() {
   esac
 }
 
-# pr_draft_and_retitle : if the title carries DRAFT_PREFIX, strip it and mark as draft (GitHub only;
-# GitLab treats the "Draft:" prefix natively).
+# pr_draft_and_retitle : preserve native draft state while normalising legacy
+# title markers that are not required by GitHub.
 pr_draft_and_retitle() {
   [ "$PLATFORM" = github ] || return 0
-  has_prefix "$PR_SUBJECT" "$DRAFT_PREFIX" || return 0
-  $GH pr ready "$PR_URL" --undo
-  $GH pr edit "$PR_URL" --title "$(printf '%s' "$PR_SUBJECT" | strip_prefix "$DRAFT_PREFIX")"
+  has_draft_prefix "$PR_SUBJECT" || return 0
+  [ "${PR_DRAFT:-false}" = "true" ] || $GH pr ready "$PR_URL" --undo
+  $GH pr edit "$PR_URL" --title "$(printf '%s' "$PR_SUBJECT" | strip_draft_prefix)"
 }
