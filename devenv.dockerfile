@@ -55,7 +55,7 @@ RUN rm -Rf /var/lib/apt/lists/*
 COPY scripts/devenv-bash.sh /etc/bash_bootstrap
 RUN echo '. /etc/bash_bootstrap' >> /etc/bash.bashrc
 
-# Creates work directory and setup permissions
+# Creates work directory and makes globally writable (for other UIDs)
 RUN mkdir -p /home/nonroot/work \
     && chmod -R 666 /home/nonroot \
     && chmod 777 /home/nonroot \
@@ -64,6 +64,6 @@ RUN mkdir -p /home/nonroot/work \
 WORKDIR /home/nonroot/work
 
 # Switch to nonroot user
-USER 1000:1000
+USER 65532:65532
 
 CMD ["/bin/bash"]
